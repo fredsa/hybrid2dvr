@@ -18,34 +18,34 @@ public class HybridController : MonoBehaviour {
     // Every 10 seconds toggle VR mode
     while (true) {
 #if UNITY_ANDROID
-      Debug.Log ("------------------------------");
+      Debug.Log (Time.frameCount + ": ------------------------------");
       LogAndUpdateText ();
       yield return WatchScreenOrientation ();
       LogAndUpdateText ();
       yield return new WaitForSeconds (10f);
       yield return SwitchToVR ("daydream");
 
-      Debug.Log ("------------------------------");
+      Debug.Log (Time.frameCount + ": ------------------------------");
       LogAndUpdateText ();
       yield return WatchScreenOrientation ();
       LogAndUpdateText ();
       yield return new WaitForSeconds (10f);
-      yield return SwitchOutOfVr ();
+      yield return SwitchTo2D ();
 #endif // UNITY_ANDROID
 
-      Debug.Log ("------------------------------");
+      Debug.Log (Time.frameCount + ": ------------------------------");
       LogAndUpdateText ();
       yield return WatchScreenOrientation ();
       LogAndUpdateText ();
       yield return new WaitForSeconds (10f);
       yield return SwitchToVR ("cardboard");
 
-      Debug.Log ("------------------------------");
+      Debug.Log (Time.frameCount + ": ------------------------------");
       LogAndUpdateText ();
       yield return WatchScreenOrientation ();
       LogAndUpdateText ();
       yield return new WaitForSeconds (10f);
-      yield return SwitchOutOfVr ();
+      yield return SwitchTo2D ();
     }
   }
 
@@ -55,7 +55,8 @@ public class HybridController : MonoBehaviour {
       ScreenOrientation n = Screen.orientation;
       if (n != o) {
         Debug.LogWarning ("After " + i + " frames: " + o + " => " + n);
-        text.text = text.text + "\n\n<color=#f00>After " + i + " frames: " + o + " => " + n + "</color>\n";
+        LogAndUpdateText ();
+        text.text = "<color=#f00>After " + i + " frames: " + o + " => " + n + "</color>\n\n" + text.text;
         o = n;
       }
       yield return null;
@@ -63,12 +64,13 @@ public class HybridController : MonoBehaviour {
   }
 
   void LogAndUpdateText () {
-    Debug.Log ("XRSettings.supportedDevices=" + string.Join (", ", XRSettings.supportedDevices) + ", XRSettings.loadedDeviceName='" + XRSettings.loadedDeviceName + "'");
+    Debug.Log (Time.frameCount + ": XRSettings.supportedDevices=" + string.Join (", ", XRSettings.supportedDevices) + ", XRSettings.loadedDeviceName='" + XRSettings.loadedDeviceName + "'");
     try {
-      Debug.Log ("GvrSettings.ViewerPlatform=" + GvrSettings.ViewerPlatform);
+      Debug.Log (Time.frameCount + ": GvrSettings.ViewerPlatform=" + GvrSettings.ViewerPlatform);
     } catch (Exception e) {
-      Debug.Log ("e=" + e);
+      Debug.Log (Time.frameCount + ": e=" + e);
     }
+    Debug.Log (Time.frameCount + ": cam.localRotation= " + Camera.main.transform.localRotation.eulerAngles.ToString ("0"));
 
     string vp;
     try {
@@ -81,7 +83,8 @@ public class HybridController : MonoBehaviour {
     text.text =
       "Screen.orientation: <b>" + Screen.orientation + "</b>\n" +
       "XRSettings.loadedDeviceName: <b>'" + XRSettings.loadedDeviceName + "'</b>\n" +
-      "GvrSettings.ViewerPlatform: <b>" + vp + "</b>";
+      "GvrSettings.ViewerPlatform: <b>" + vp + "</b>\n" +
+      "cam.localRotation: <b>" + Camera.main.transform.localRotation.eulerAngles.ToString ("0") + "</b>\n";
   }
 
   IEnumerator SwitchToVR (string desiredDevice) {
@@ -90,18 +93,21 @@ public class HybridController : MonoBehaviour {
       yield break;
     }
 
-    Debug.Log ("XRSettings.LoadDeviceByName('" + desiredDevice + "')");
+    Debug.Log (Time.frameCount + ": XRSettings.LoadDeviceByName('" + desiredDevice + "')");
     XRSettings.LoadDeviceByName (desiredDevice);
 
     // Wait one frame!
     yield return null;
 
+    // Set orientation due to magic window.
+    transform.localRotation = Quaternion.identity;
+
     // Now it's ok to enable VR mode.
     XRSettings.enabled = true;
   }
 
-  IEnumerator SwitchOutOfVr () {
-    Debug.Log ("XRSettings.LoadDeviceByName('" + "" + "')");
+  IEnumerator SwitchTo2D () {
+    Debug.Log (Time.frameCount + ": XRSettings.LoadDeviceByName('" + "" + "')");
     XRSettings.LoadDeviceByName (""); // Empty string loads the "None" device.
 
     // Wait one frame!
@@ -120,6 +126,7 @@ public class HybridController : MonoBehaviour {
     for (int i = 0; i < Camera.allCameras.Length; i++) {
       Camera cam = Camera.allCameras[i];
       if (cam.enabled && cam.stereoTargetEye != StereoTargetEyeMask.None) {
+        Debug.Log (Time.frameCount + ": Reset " + cam.name + " …");
 
         // Reset local rotation. (Only required if you change the local rotation while in non-VR mode.)
         cam.transform.localRotation = Quaternion.identity;

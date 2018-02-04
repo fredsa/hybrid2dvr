@@ -1039,7 +1039,11 @@ MonoBehaviour:
 
     XRSettings.loadedDeviceName: <b>''daydream''</b>
 
-    GvrSettings.ViewerPlatform: <b>Daydream</b>'
+    GvrSettings.ViewerPlatform: <b>Daydream</b>
+
+    cam.localRotation: <b>(0, 0, 0)</b>
+
+'
 --- !u!222 &2077732787
 CanvasRenderer:
   m_ObjectHideFlags: 0
