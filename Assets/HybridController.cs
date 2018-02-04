@@ -8,6 +8,9 @@ using UnityEngine.XR;
 public class HybridController : MonoBehaviour {
 
   Text text;
+  string watchScreenOrientationMessage = "";
+  bool escapePressed;
+  string runtimeviewerplatform;
 
   IEnumerator Start () {
     text = GetComponentInChildren<Text> ();
@@ -15,36 +18,41 @@ public class HybridController : MonoBehaviour {
     // Make sure Gyroscope is enabled.
     Input.gyro.enabled = true;
 
-    // Every 10 seconds toggle VR mode
-    while (true) {
+    LogState ();
+
+    runtimeviewerplatform = GvrSettings.ViewerPlatform.ToString().ToLower();
+    Debug.Log(Time.frameCount + ": runtimeviewerplatform=" + runtimeviewerplatform);
+
+    // Every 10 seconds toggle VR mode, until 'back' is used to being manual control.
+    while (!escapePressed) {
 #if UNITY_ANDROID
       Debug.Log (Time.frameCount + ": ------------------------------");
-      LogAndUpdateText ();
-      yield return WatchScreenOrientation ();
-      LogAndUpdateText ();
       yield return new WaitForSeconds (10f);
+      if (escapePressed) {
+        yield break;
+      }
       yield return SwitchToVR ("daydream");
 
       Debug.Log (Time.frameCount + ": ------------------------------");
-      LogAndUpdateText ();
-      yield return WatchScreenOrientation ();
-      LogAndUpdateText ();
       yield return new WaitForSeconds (10f);
+      if (escapePressed) {
+        yield break;
+      }
       yield return SwitchTo2D ();
 #endif // UNITY_ANDROID
 
       Debug.Log (Time.frameCount + ": ------------------------------");
-      LogAndUpdateText ();
-      yield return WatchScreenOrientation ();
-      LogAndUpdateText ();
       yield return new WaitForSeconds (10f);
+      if (escapePressed) {
+        yield break;
+      }
       yield return SwitchToVR ("cardboard");
 
       Debug.Log (Time.frameCount + ": ------------------------------");
-      LogAndUpdateText ();
-      yield return WatchScreenOrientation ();
-      LogAndUpdateText ();
       yield return new WaitForSeconds (10f);
+      if (escapePressed) {
+        yield break;
+      }
       yield return SwitchTo2D ();
     }
   }
@@ -55,15 +63,16 @@ public class HybridController : MonoBehaviour {
       ScreenOrientation n = Screen.orientation;
       if (n != o) {
         Debug.LogWarning ("After " + i + " frames: " + o + " => " + n);
-        LogAndUpdateText ();
-        text.text = "<color=#f00>After " + i + " frames: " + o + " => " + n + "</color>\n\n" + text.text;
+        LogState ();
+        watchScreenOrientationMessage = "<color=#f00>After " + i + " frames: " + o + " => " + n + "</color>\n";
         o = n;
       }
+      watchScreenOrientationMessage = "";
       yield return null;
     }
   }
 
-  void LogAndUpdateText () {
+  void LogState () {
     Debug.Log (Time.frameCount + ": XRSettings.supportedDevices=" + string.Join (", ", XRSettings.supportedDevices) + ", XRSettings.loadedDeviceName='" + XRSettings.loadedDeviceName + "'");
     try {
       Debug.Log (Time.frameCount + ": GvrSettings.ViewerPlatform=" + GvrSettings.ViewerPlatform);
@@ -71,7 +80,9 @@ public class HybridController : MonoBehaviour {
       Debug.Log (Time.frameCount + ": e=" + e);
     }
     Debug.Log (Time.frameCount + ": cam.localRotation= " + Camera.main.transform.localRotation.eulerAngles.ToString ("0"));
+  }
 
+  void UpdateText () {
     string vp;
     try {
       vp = GvrSettings.ViewerPlatform.ToString ();
@@ -81,6 +92,7 @@ public class HybridController : MonoBehaviour {
 
     text.fontSize = XRSettings.enabled ? 35 : 20;
     text.text =
+      watchScreenOrientationMessage +
       "Screen.orientation: <b>" + Screen.orientation + "</b>\n" +
       "XRSettings.loadedDeviceName: <b>'" + XRSettings.loadedDeviceName + "'</b>\n" +
       "GvrSettings.ViewerPlatform: <b>" + vp + "</b>\n" +
@@ -104,6 +116,10 @@ public class HybridController : MonoBehaviour {
 
     // Now it's ok to enable VR mode.
     XRSettings.enabled = true;
+
+    LogState ();
+    yield return WatchScreenOrientation ();
+    LogState ();
   }
 
   IEnumerator SwitchTo2D () {
@@ -118,6 +134,10 @@ public class HybridController : MonoBehaviour {
 
     // If you only have one camera in your scene, you can just call `Camera.main.ResetAspect()` instead.
     ResetCameras ();
+
+    LogState ();
+    yield return WatchScreenOrientation ();
+    LogState ();
   }
 
   // Resets local rotation and calls `ResetAspect()` on all enabled VR cameras.
@@ -148,6 +168,18 @@ public class HybridController : MonoBehaviour {
   float dragYawDegrees;
 
   void Update () {
+    UpdateText ();
+
+    if (Input.GetKeyDown (KeyCode.Escape)) {
+      escapePressed = true;
+      Debug.Log (Time.frameCount + ": ESCAPE pressed");
+      if (XRSettings.loadedDeviceName == "") {
+        StartCoroutine (SwitchToVR (runtimeviewerplatform));
+      } else {
+        StartCoroutine (SwitchTo2D ());
+      }
+    }
+
     if (XRSettings.enabled) {
       // Unity takes care of updating camera transform in VR.
       return;
