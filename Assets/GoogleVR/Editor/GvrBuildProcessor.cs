@@ -25,6 +25,10 @@ using UnityEngine.XR;
 using XRSettings = UnityEngine.VR.VRSettings;
 #endif  // UNITY_2017_2_OR_NEWER
 
+#if UNITY_2018_1_OR_NEWER
+using UnityEditor.Build.Reporting;
+#endif
+
 // Notifies users if they build for Android or iOS without Cardboard or Daydream enabled.
 class GvrBuildProcessor : IPreprocessBuild {
   private const string VR_SETTINGS_NOT_ENABLED_ERROR_MESSAGE_FORMAT =
@@ -40,6 +44,13 @@ class GvrBuildProcessor : IPreprocessBuild {
   public int callbackOrder {
     get { return 0; }
   }
+
+#if UNITY_2018_1_OR_NEWER
+  public void OnPreprocessBuild(BuildReport report)
+  {
+    OnPreprocessBuild(report.summary.platform, report.summary.outputPath);
+  }
+#endif
 
   public void OnPreprocessBuild (BuildTarget target, string path)
   {
@@ -81,5 +92,6 @@ class GvrBuildProcessor : IPreprocessBuild {
     int numSdks = XRSettings.supportedDevices.Length;
     return containsNone ? numSdks > 1 : numSdks > 0;
   }
+
 }
 #endif  // UNITY_ANDROID || UNITY_IOS
